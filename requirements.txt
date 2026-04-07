@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pytesseract
+opencv-python
+nltk
+python-multipart
+pydantic
+

@@ -1,0 +1,127 @@
+# ======================
+# PYTHON
+# ======================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# virtual environment
+venv/
+.env/
+.venv/
+env/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+
+# coverage
+.coverage
+htmlcov/
+
+# ======================
+# ENV VARIABLES
+# ======================
+
+.env
+.env.local
+.env.production
+
+# ======================
+# DATABASE
+# ======================
+
+*.db
+*.sqlite3
+*.sqlite
+*.sql
+
+# ======================
+# IDE FILES
+# ======================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ======================
+# LOG FILES
+# ======================
+
+*.log
+logs/
+
+# ======================
+# OS FILES
+# ======================
+
+.DS_Store
+Thumbs.db
+
+# ======================
+# OCR / IMAGE STORAGE
+# ======================
+
+storage/survey_images/
+uploads/
+media/
+
+# ======================
+# MODEL FILES
+# ======================
+
+*.pkl
+*.joblib
+*.h5
+*.pt
+
+# ======================
+# BUILD FILES
+# ======================
+
+dist/
+build/
+*.egg-info/
+
+# ======================
+# NODE (if frontend added later)
+# ======================
+
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ======================
+# DOCKER
+# ======================
+
+docker-compose.override.yml
+
+# ======================
+# TEST OUTPUTS
+# ======================
+
+.coverage
+.cache/
+
+# ======================
+# JUPYTER
+# ======================
+
+.ipynb_checkpoints/
+
+# ======================
+# TEMP FILES
+# ======================
+
+tmp/
+temp/
+*.tmp
