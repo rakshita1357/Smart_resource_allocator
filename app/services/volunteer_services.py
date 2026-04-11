@@ -12,3 +12,4 @@ async def get_all_volunteers():
         doc["_id"] = str(doc["_id"])
         result.append(doc)
     return result
+# in process

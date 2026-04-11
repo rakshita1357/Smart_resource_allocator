@@ -10,3 +10,5 @@ class Need(BaseModel):
     skills_required: Optional[List[str]] = []
     urgency_level: Optional[str]
     people_affected: Optional[int]
+
+    # in process

@@ -68,3 +68,4 @@ async def upload_survey(image: UploadFile = File(...)):
         "survey_id": survey_id,
         "need_id": need_id
     }
+# in process

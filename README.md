@@ -28,3 +28,4 @@ Notes:
 - Uses SQLite by default for quick local testing. Set `DATABASE_URL` to a Postgres URL for production.
 - OCR requires Tesseract installed on the host.
 
+// in process

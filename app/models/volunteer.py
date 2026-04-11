@@ -11,3 +11,5 @@ class Volunteer(BaseModel):
     skills: Optional[List[str]] = []
     availability: Optional[str]
     experience_level: Optional[str]
+
+    # in process

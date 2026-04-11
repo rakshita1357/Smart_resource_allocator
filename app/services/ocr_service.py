@@ -44,3 +44,4 @@ def extract_text(image_path: str) -> str:
     # Run OCR
     text = pytesseract.image_to_string(processed)
     return text
+# in process

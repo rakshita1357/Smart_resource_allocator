@@ -8,3 +8,4 @@ class Settings:
     DB_NAME = os.getenv("DB_NAME", "smart_resource_allocator")
 
 settings = Settings()
+# in process

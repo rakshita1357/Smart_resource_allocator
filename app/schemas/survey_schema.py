@@ -7,3 +7,4 @@ class SurveyCreateResponse(BaseModel):
     extracted_text: Optional[str]
     identified_skills: List[str]
 
+# in process
