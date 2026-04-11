@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 from typing import List
 from pydantic import BaseModel
-from app.db.session import get_db
-from app.models import survey, volunteer  # noqa: F401
+from app.db.session import db
 
 router = APIRouter(prefix="/ngo", tags=["NGO"])
 
@@ -24,33 +22,35 @@ class DriveCreate(BaseModel):
     volunteers_needed: int
 
 
-# For minimal implementation we'll store NGOs and drives in memory
-NGOS = []
-DRIVES = []
-
-
 @router.post("/register")
-def register_ngo(payload: NGORegister):
-    """Register a new NGO (in-memory for minimal demo)."""
-    for n in NGOS:
-        if n["email"] == payload.email:
-            raise HTTPException(status_code=400, detail="NGO with this email already exists")
-    ngo = payload.dict()
-    ngo["id"] = len(NGOS) + 1
-    NGOS.append(ngo)
-    return ngo
+async def register_ngo(payload: NGORegister):
+    collection = db["ngos"]
+
+    existing = await collection.find_one({"email": payload.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="NGO already exists")
+
+    result = await collection.insert_one(payload.dict())
+
+    return {"id": str(result.inserted_id)}
 
 
 @router.post("/create-drive")
-def create_drive(payload: DriveCreate):
-    """Create a drive linked to an NGO (minimal in-memory implementation)."""
-    drive = payload.dict()
-    drive["id"] = len(DRIVES) + 1
-    DRIVES.append(drive)
-    return drive
+async def create_drive(payload: DriveCreate):
+    collection = db["drives"]
+
+    result = await collection.insert_one(payload.dict())
+
+    return {"id": str(result.inserted_id)}
 
 
 @router.get("/drives")
-def list_drives():
-    return DRIVES
+async def list_drives():
+    collection = db["drives"]
 
+    drives = []
+    async for doc in collection.find():
+        doc["_id"] = str(doc["_id"])
+        drives.append(doc)
+
+    return drives

@@ -1,38 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 from typing import List
-from app.db.session import get_db
+from app.db.session import db
 from app.models.volunteer import Volunteer
-from app.schemas.volunteer_schema import VolunteerCreate, VolunteerRead
 
-router = APIRouter(prefix="/volunteer", tags=["Volunteer"])
+router = APIRouter(prefix="/volunteers", tags=["Volunteers"])
 
 
-@router.post("/register", response_model=VolunteerRead)
-def register_volunteer(payload: VolunteerCreate, db: Session = Depends(get_db)):
-    """Register a new volunteer and persist to the database."""
-    existing = db.query(Volunteer).filter(Volunteer.email == payload.email).first()
+@router.post("/")
+async def create_volunteer(payload: Volunteer):
+    collection = db["volunteers"]
+
+    # check duplicate email
+    existing = await collection.find_one({"email": payload.email})
     if existing:
-        raise HTTPException(status_code=400, detail="Volunteer with this email already exists")
+        raise HTTPException(status_code=400, detail="Email already exists")
 
-    vol = Volunteer(
-        name=payload.name,
-        email=payload.email,
-        phone=payload.phone,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        skills=payload.skills or [],
-        availability=payload.availability,
-        experience_level=payload.experience_level,
-    )
-    db.add(vol)
-    db.commit()
-    db.refresh(vol)
-    return vol
+    result = await collection.insert_one(payload.dict(exclude={"id"}))
+
+    return {"id": str(result.inserted_id)}
 
 
-@router.get("/", response_model=List[VolunteerRead])
-def list_volunteers(db: Session = Depends(get_db)):
-    """List all registered volunteers."""
-    vols = db.query(Volunteer).all()
-    return vols
+@router.get("/")
+async def get_volunteers():
+    collection = db["volunteers"]
+
+    volunteers = []
+    async for doc in collection.find():
+        doc["_id"] = str(doc["_id"])
+        volunteers.append(doc)
+
+    return volunteers

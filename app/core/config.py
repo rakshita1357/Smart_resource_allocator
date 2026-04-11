@@ -1,12 +1,10 @@
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-def get_database_url() -> str:
-    return os.getenv("DATABASE_URL", "sqlite:///./test.db")
+class Settings:
+    MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+    DB_NAME = os.getenv("DB_NAME", "smart_resource_allocator")
 
-
-def get_survey_storage_dir() -> str:
-    return os.getenv("SURVEY_STORAGE_DIR", None)
-
-
-APP_NAME = os.getenv("APP_NAME", "Smart Volunteer Matching System")
+settings = Settings()

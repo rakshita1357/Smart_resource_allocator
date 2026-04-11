@@ -1,17 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, UploadFile, File, HTTPException
 import os
 import uuid
 from pathlib import Path
-from typing import List
-from app.db.session import get_db
-from app.models.survey import Survey
-from app.models.need import Need
+from app.db.session import db
 from app.services.ocr_service import extract_text
 from app.services.text_preprocessing import clean_text
 from app.services.keyword_extractor import extract_skills
 
 router = APIRouter(prefix="/survey", tags=["Survey"])
+
 
 # storage path
 DEFAULT_STORAGE = os.path.join(os.path.dirname(__file__), "..", "..", "storage", "survey_images")
@@ -22,13 +19,12 @@ STORAGE_PATH.mkdir(parents=True, exist_ok=True)
 
 
 @router.get("/test")
-def test_route():
+async def test_route():
     return {"message": "survey route working"}
 
 
 @router.post("/upload")
-async def upload_survey(image: UploadFile = File(...), db: Session = Depends(get_db)):
-    """Upload an image, perform OCR and create a Need record."""
+async def upload_survey(image: UploadFile = File(...)):
     if image.content_type.split("/")[0] != "image":
         raise HTTPException(status_code=400, detail="Uploaded file must be an image")
 
@@ -42,19 +38,33 @@ async def upload_survey(image: UploadFile = File(...), db: Session = Depends(get
     # OCR
     extracted = extract_text(file_path)
 
-    # Text processing
+    # NLP
     tokens = clean_text(extracted)
     skills = extract_skills(tokens)
 
-    # Persist Survey and Need
-    survey = Survey(image_path=file_path, extracted_text=extracted)
-    db.add(survey)
-    db.commit()
-    db.refresh(survey)
+    # Mongo collections
+    survey_col = db["surveys"]
+    need_col = db["needs"]
 
-    need = Need(survey_id=survey.id, skills_required=skills)
-    db.add(need)
-    db.commit()
-    db.refresh(need)
+    # insert survey
+    survey_doc = {
+        "image_path": file_path,
+        "extracted_text": extracted
+    }
+    survey_res = await survey_col.insert_one(survey_doc)
+    survey_id = str(survey_res.inserted_id)
 
-    return {"extracted_text": extracted, "skills_required": skills, "survey_id": survey.id, "need_id": need.id}
+    # insert need
+    need_doc = {
+        "survey_id": survey_id,
+        "skills_required": skills
+    }
+    need_res = await need_col.insert_one(need_doc)
+    need_id = str(need_res.inserted_id)
+
+    return {
+        "extracted_text": extracted,
+        "skills_required": skills,
+        "survey_id": survey_id,
+        "need_id": need_id
+    }

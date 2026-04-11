@@ -1,74 +1,73 @@
-from typing import List, Dict, Any
-from sqlalchemy.orm import Session
-from ..models.volunteer import Volunteer
-from ..models.need import Need
-from ..models.match import Match
-from ..utils.location_utils import haversine_distance, availability_score
+from app.db.session import db
+from app.utils.location_utils import haversine_distance, availability_score
 
-
-def _jaccard_similarity(a: List[str], b: List[str]) -> float:
+def _jaccard_similarity(a, b):
     set_a = set([x.lower() for x in a])
     set_b = set([x.lower() for x in b])
     if not set_a and not set_b:
         return 0.0
-    inter = set_a.intersection(set_b)
-    union = set_a.union(set_b)
-    return len(inter) / len(union) if union else 0.0
+    return len(set_a & set_b) / len(set_a | set_b)
 
 
-def _distance_score(lat1, lon1, lat2, lon2) -> float:
-    dist_km = haversine_distance(lat1, lon1, lat2, lon2)
-    if dist_km == float("inf"):
+def _distance_score(lat1, lon1, lat2, lon2):
+    dist = haversine_distance(lat1, lon1, lat2, lon2)
+    if dist == float("inf"):
         return 0.0
-    # Convert to score: distance 0 -> 1, >200 km -> 0
-    score = max(0.0, 1 - (dist_km / 200.0))
-    return score
+    return max(0.0, 1 - (dist / 200))
 
 
-def match_volunteers(db: Session, need_id: int, top_k: int = 10) -> List[Dict[str, Any]]:
-    """Find and store matches for a given need.
+async def match_volunteers(need_id: str, top_k: int = 10):
+    needs_col = db["needs"]
+    vol_col = db["volunteers"]
+    match_col = db["matches"]
 
-    Returns list of top matched volunteers with score and volunteer info.
-    """
-    need = db.query(Need).filter(Need.id == need_id).first()
+    need = await needs_col.find_one({"_id": need_id})
     if not need:
         return []
 
-    volunteers = db.query(Volunteer).all()
+    volunteers = vol_col.find()
+
     results = []
 
-    for vol in volunteers:
-        # Skill similarity (60%)
-        skill_score = _jaccard_similarity(getattr(vol, "skills", []) or [], getattr(need, "skills_required", []) or [])
+    async for vol in volunteers:
+        skill_score = _jaccard_similarity(
+            vol.get("skills", []),
+            need.get("skills_required", [])
+        )
 
-        # Distance score (20%)
-        dist_score = _distance_score(getattr(vol, "latitude", None), getattr(vol, "longitude", None), getattr(need, "latitude", None), getattr(need, "longitude", None))
+        dist_score = _distance_score(
+            vol.get("latitude"),
+            vol.get("longitude"),
+            need.get("latitude"),
+            need.get("longitude"),
+        )
 
-        # Availability score (20%)
-        avail = availability_score(getattr(vol, "availability", None), getattr(need, "urgency_level", None))
+        avail = availability_score(
+            vol.get("availability"),
+            need.get("urgency_level")
+        )
 
         score = 0.6 * skill_score + 0.2 * dist_score + 0.2 * avail
 
-        # Store match
-        match = Match(volunteer_id=int(getattr(vol, "id")), need_id=int(getattr(need, "id")), score=score, status="pending")
-        db.add(match)
-        db.commit()
-        db.refresh(match)
+        match_doc = {
+            "volunteer_id": str(vol["_id"]),
+            "need_id": need_id,
+            "score": score,
+            "status": "pending"
+        }
+
+        res = await match_col.insert_one(match_doc)
 
         results.append({
+            "match_id": str(res.inserted_id),
             "volunteer": {
-                "id": getattr(vol, "id"),
-                "name": getattr(vol, "name"),
-                "email": getattr(vol, "email"),
-                "skills": getattr(vol, "skills"),
-                "latitude": getattr(vol, "latitude"),
-                "longitude": getattr(vol, "longitude"),
-                "availability": getattr(vol, "availability"),
+                "id": str(vol["_id"]),
+                "name": vol.get("name"),
+                "email": vol.get("email"),
+                "skills": vol.get("skills"),
             },
-            "score": score,
-            "match_id": getattr(match, "id"),
+            "score": score
         })
 
-    # Sort by score desc and return top_k
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:top_k]
