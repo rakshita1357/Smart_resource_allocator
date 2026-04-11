@@ -12,10 +12,10 @@ class Volunteer(Base, TimestampMixin):
     phone = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    # Use JSON to store a list of skill strings - compatible with SQLite and PostgreSQL
     skills = Column(JSON, default=list)
     availability = Column(String, nullable=True)
     experience_level = Column(String, nullable=True)
 
     # relationships
     matches = relationship("Match", back_populates="volunteer")
-
