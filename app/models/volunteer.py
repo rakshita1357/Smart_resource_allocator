@@ -1,13 +1,21 @@
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional
+from sqlalchemy import Column, Integer, String, Float, JSON
+from sqlalchemy.orm import relationship
+from ..db.base import Base, TimestampMixin
 
-class Volunteer(BaseModel):
-    id: Optional[str] = None
-    name: str
-    email: EmailStr
-    phone: Optional[str]
-    latitude: Optional[float]
-    longitude: Optional[float]
-    skills: Optional[List[str]] = []
-    availability: Optional[str]
-    experience_level: Optional[str]
+
+class Volunteer(Base, TimestampMixin):
+    __tablename__ = "volunteers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
+    phone = Column(String, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    # Use JSON to store a list of skill strings - compatible with SQLite and PostgreSQL
+    skills = Column(JSON, default=list)
+    availability = Column(String, nullable=True)
+    experience_level = Column(String, nullable=True)
+
+    # relationships
+    matches = relationship("Match", back_populates="volunteer")
