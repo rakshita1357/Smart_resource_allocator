@@ -20,7 +20,7 @@ class VolunteerCreate(BaseModel):
 
 
 class VolunteerRead(BaseModel):
-    id: int
+    id: str
     name: str
     email: EmailStr
     phone: Optional[str] = None

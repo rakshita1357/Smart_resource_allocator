@@ -1,11 +1,8 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 import os
 import uuid
 from pathlib import Path
-from app.db.session import get_db
-from app.models.survey import Survey
-from app.models.need import Need
+from app.db.mongodb import get_db
 from app.services.ocr_service import extract_text
 from app.services.text_preprocessing import clean_text
 from app.services.keyword_extractor import extract_skills
@@ -32,9 +29,9 @@ def test_route():
 @router.post("/upload")
 async def upload_survey(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db=Depends(get_db),
 ):
-    """Upload an image file, run OCR, extract skills and create corresponding Survey and Need records."""
+    """Upload an image file, run OCR, extract skills and create Survey and Need documents in MongoDB."""
     # Validate content type
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file must be an image")
@@ -54,12 +51,11 @@ async def upload_survey(
     finally:
         await file.close()
 
-    # Run OCR
+    # Run OCR (sync)
     try:
         extracted = extract_text(file_path)
     except Exception as exc:
         logger.exception("OCR processing failed: %s", exc)
-        # Continue but mark extracted as empty
         extracted = ""
 
     # Text processing
@@ -68,15 +64,18 @@ async def upload_survey(
 
     # Persist Survey and Need
     try:
-        survey = Survey(image_path=file_path, extracted_text=extracted)
-        db.add(survey)
-        db.commit()
-        db.refresh(survey)
+        survey_doc = {"image_path": file_path, "extracted_text": extracted}
+        survey_result = await db.surveys.insert_one(survey_doc)
+        survey_id = str(survey_result.inserted_id)
 
-        need = Need(survey_id=survey.id, skills_required=skills)
-        db.add(need)
-        db.commit()
-        db.refresh(need)
+        need_doc = {
+            "survey_id": survey_id,
+            "skills_required": skills,
+            "urgency_level": None,
+            "location": None,
+        }
+        need_result = await db.needs.insert_one(need_doc)
+        need_id = str(need_result.inserted_id)
     except Exception as exc:
         logger.exception("DB persist failed: %s", exc)
         # Attempt cleanup of saved file to avoid orphaned files
@@ -90,6 +89,6 @@ async def upload_survey(
         "filename": filename,
         "extracted_text": extracted,
         "skills_detected": skills,
-        "survey_id": survey.id,
-        "need_id": need.id,
+        "survey_id": survey_id,
+        "need_id": need_id,
     }

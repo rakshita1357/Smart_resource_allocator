@@ -12,11 +12,10 @@ class NGOCreate(BaseModel):
 
 
 class NGORead(BaseModel):
-    id: int
+    id: str
     name: str
     email: EmailStr
     phone: str
     location: str
 
-    # Pydantic v2-style config to allow constructing from ORM objects
     model_config = {"from_attributes": True}

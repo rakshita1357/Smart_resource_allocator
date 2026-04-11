@@ -4,9 +4,6 @@ from app.api.routes.volunteers import router as volunteer_router
 from app.api.routes.ngos import router as ngo_router
 from app.api.routes.matching import router as matching_router
 from app.api.routes.survey_upload import router as survey_router
-from app.db.base import Base
-from app.db.session import engine
-import app.models  # ensure models are imported so they register with Base
 
 app = FastAPI(
     title="Smart Volunteer Matching System",
@@ -26,12 +23,6 @@ app.include_router(volunteer_router)
 app.include_router(ngo_router)
 app.include_router(matching_router)
 app.include_router(survey_router)
-
-
-@app.on_event("startup")
-def on_startup():
-    """Create DB tables if they do not exist."""
-    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/", tags=["Health"])

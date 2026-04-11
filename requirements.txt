@@ -1,10 +1,11 @@
 fastapi
 uvicorn
-sqlalchemy
-psycopg2-binary
+motor
+pymongo
+python-dotenv
 pytesseract
 opencv-python
 nltk
 python-multipart
 pydantic
-
+python-dotenv

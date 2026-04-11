@@ -1,10 +1,5 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from app.db.session import engine
-from app.db.base import Base
-
-# Create tables
-Base.metadata.create_all(bind=engine)
 
 client = TestClient(app)
 
@@ -27,7 +22,6 @@ except Exception as e:
     print('No JSON response:', e)
 
 print('\nTesting survey upload endpoint...')
-# Minimal PNG header bytes; endpoint only saves and runs OCR which may return empty
 files = {'file': ('test.png', b'\x89PNG\r\n\x1a\n', 'image/png')}
 resp2 = client.post('/survey/upload', files=files)
 print('Status:', resp2.status_code)
@@ -35,4 +29,3 @@ try:
     print('Response:', resp2.json())
 except Exception as e:
     print('No JSON response:', e)
-
