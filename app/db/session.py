@@ -1,9 +1,3 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config import settings
+from app.db.mongodb import client, db, get_db
 
-client = AsyncIOMotorClient(settings.MONGO_URI)
-db = client[settings.DB_NAME]
-
-def get_db():
-    return db
-# in process
+__all__ = ["client", "db", "get_db"]

@@ -1,33 +1,16 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
-from app.db.session import db
-from app.models.volunteer import Volunteer
+from typing import Any
+
+from fastapi import APIRouter, Depends
+
+from app.db.mongodb import get_db
 
 router = APIRouter(prefix="/volunteers", tags=["Volunteers"])
 
 
-@router.post("/")
-async def create_volunteer(payload: Volunteer):
-    collection = db["volunteers"]
-
-    # check duplicate email
-    existing = await collection.find_one({"email": payload.email})
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already exists")
-
-    result = await collection.insert_one(payload.dict(exclude={"id"}))
-
-    return {"id": str(result.inserted_id)}
-
-
 @router.get("/")
-async def get_volunteers():
-    collection = db["volunteers"]
-
-    volunteers = []
-    async for doc in collection.find():
-        doc["_id"] = str(doc["_id"])
-        volunteers.append(doc)
-
+async def get_volunteers(db: Any = Depends(get_db)):
+    """Return a list of volunteers from MongoDB."""
+    volunteers = await db.volunteers.find().to_list(length=100)
+    for volunteer in volunteers:
+        volunteer["_id"] = str(volunteer["_id"])
     return volunteers
-# in process
