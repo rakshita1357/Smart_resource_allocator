@@ -29,8 +29,7 @@ htmlcov/
 # ======================
 # ENV VARIABLES
 # ======================
-
-.env
+.env*
 .env.local
 .env.production
 

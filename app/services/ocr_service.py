@@ -1,47 +1,57 @@
 import os
+from pathlib import Path
+
+try:
+    import cv2
+except ModuleNotFoundError:  # pragma: no cover - optional dependency guard
+    cv2 = None
 
 try:
     import pytesseract
-except Exception:  # pragma: no cover - pytesseract might not be installed in CI
+    from pytesseract import TesseractNotFoundError
+except ModuleNotFoundError:  # pragma: no cover - optional dependency guard
     pytesseract = None
+    TesseractNotFoundError = RuntimeError
+
+
+class OCRServiceError(RuntimeError):
+    """Raised when OCR cannot be performed due to configuration or runtime issues."""
+
+
+def _configure_tesseract() -> None:
+    """Configure the Tesseract executable path from environment variables."""
+    if pytesseract is None:
+        raise OCRServiceError("pytesseract is not installed. Install dependencies from requirements.txt.")
+
+    tesseract_cmd = os.getenv("TESSERACT_CMD") or os.getenv("TESSERACT_PATH")
+    if tesseract_cmd:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
 
 def extract_text(image_path: str) -> str:
-    """Extract text from an image using OpenCV preprocessing and pytesseract.
+    """Extract text from an image using OpenCV preprocessing and pytesseract."""
+    _configure_tesseract()
 
-    This function imports OpenCV lazily so the module can be imported even when
-    OpenCV is not installed. If either OpenCV or pytesseract is missing, the
-    function will return an empty string.
-    """
-    if not os.path.exists(image_path):
-        return ""
+    if cv2 is None:
+        raise OCRServiceError("OpenCV is not installed. Install dependencies from requirements.txt.")
 
-    # Import cv2 lazily
-    try:
-        import cv2
-    except Exception:
-        # OpenCV not available
-        return ""
+    if not Path(image_path).exists():
+        raise OCRServiceError(f"Image file not found: {image_path}")
 
-    # Read image
     img = cv2.imread(image_path)
     if img is None:
-        return ""
+        raise OCRServiceError(f"Unable to read image file: {image_path}")
 
-    # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Apply thresholding to binarize
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # Optionally apply median blur to reduce noise
     processed = cv2.medianBlur(thresh, 3)
 
-    if pytesseract is None:
-        # If pytesseract missing, return empty but keep pipeline complete
-        return ""
-
-    # Run OCR
-    text = pytesseract.image_to_string(processed)
-    return text
-# in process
+    try:
+        return pytesseract.image_to_string(processed)
+    except TesseractNotFoundError as exc:
+        raise OCRServiceError(
+            "Tesseract OCR is not installed or not in PATH. "
+            "Install Tesseract and set TESSERACT_CMD to the executable path."
+        ) from exc
+    except Exception as exc:
+        raise OCRServiceError(f"OCR extraction failed: {exc}") from exc
