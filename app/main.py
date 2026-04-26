@@ -15,13 +15,17 @@ from app.services.auth_service import ensure_auth_indexes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Verify MongoDB Atlas connectivity and initialize indexes on startup."""
+    if client is None:
+        print("MongoDB client is unavailable; skipping startup ping and index initialization.")
+        yield
+        return
+
     try:
         await client.admin.command("ping")
         print("MongoDB Atlas connected")
         await ensure_auth_indexes(mongo_db)
     except Exception as exc:
         print(f"MongoDB Atlas connection failed: {exc}")
-        raise
     yield
 
 

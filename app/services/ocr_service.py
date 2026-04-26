@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
 
 try:
     import cv2
@@ -19,13 +21,16 @@ class OCRServiceError(RuntimeError):
 
 
 def _configure_tesseract() -> None:
-    """Configure the Tesseract executable path from environment variables."""
     if pytesseract is None:
-        raise OCRServiceError("pytesseract is not installed. Install dependencies from requirements.txt.")
+        raise OCRServiceError("pytesseract is not installed.")
 
-    tesseract_cmd = os.getenv("TESSERACT_CMD") or os.getenv("TESSERACT_PATH")
-    if tesseract_cmd:
-        pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+    tesseract_cmd = (
+        os.getenv("TESSERACT_CMD")
+        or os.getenv("TESSERACT_PATH")
+        or r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    )
+
+    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
 
 def extract_text(image_path: str) -> str:
